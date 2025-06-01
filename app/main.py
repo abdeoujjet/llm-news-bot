@@ -16,7 +16,19 @@ from concurrent.futures import ThreadPoolExecutor
 # Cargar variables del archivo .env
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
+TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+CHANNEL_ID = os.getenv("CHANNEL_ID")
 
+MODELO_RESUMEN = "phi3:3.8b"
+# MODELO_RESUMEN = "gemma3:4b"
+# MODELO_RESUMEN = "wizardlm2:7b"
+# MODELO_RESUMEN = "qwen2.5vl:3b"
+
+# MODELO_FILTRO = "phi3:3.8b"
+MODELO_FILTRO = "gemma3:4b"
+# MODELO_FILTRO = "wizardlm2:7b"
+# MODELO_FILTRO = "qwen2.5vl:3b"
 
 def get_news_ultima_hora(url):
     # url de noticias de mallorca
@@ -122,9 +134,11 @@ def resumir_web(url , modelo):
         }
         ]
 
+        print(" - M * * * * * Comienza resumen")
+        print(texto)
         # Enviamos el mensaje al modelo junto al texto para resumirlo
         response = modelo.chat.completions.create(
-        model="gemma3:4b",
+        model=MODELO_RESUMEN,
         messages=msg
         )
         # print(response.choices[0].message.content)
@@ -148,7 +162,7 @@ def selector_noticias_relevantes(news_list):
     msg = [
         {
             "role": "system",
-            "content": """Eres un editor experto en análisis de noticias. Tu tarea es:
+            "content": """Eres un editor experto en análisis de noticias que escribe estructuras JSON. Tu tarea es:
             
                         1. Analizar esta lista de titulares de noticias
                         2. Seleccionar los 10 más relevantes según estos criterios:
@@ -182,10 +196,10 @@ def selector_noticias_relevantes(news_list):
     ]
 
     print(" - M * * * * * Comienza modelo filtrado")
-
+    print(datos_simplificados)
     # obtenemos JSON con los filtros mas relevantes y si id
     response = modelo_filtro_titulos.chat.completions.create(
-        model="gemma3:4b",
+        model=MODELO_FILTRO,
         messages=msg,
         response_format={"type": "json_object"}  # forzar al modelo a que devulva un json
     )
@@ -222,12 +236,79 @@ def selector_noticias_relevantes(news_list):
     return respuesta_modelo['noticias_relevantes']
 
 
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
+def enviar_telegram(contenido: str):
+    """
+    Envía mensajes a Telegram (tanto a usuario como a canal)
+
+    Args:
+        contenido (str): Texto a enviar
+        modo_test (bool): Si True, solo simula el envío
+    """
+    if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID or not CHANNEL_ID:
+        print("⚠️ Credenciales de Telegram no configuradas")
+        return False
+
+    try:
+        url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+        chat_ids = [TELEGRAM_CHAT_ID, CHANNEL_ID]
+
+        for chat_id in chat_ids:
+            payload = {
+                "chat_id": chat_id,
+                "text": contenido,
+                "parse_mode": "HTML"
+            }
+            response = requests.post(url, json=payload, timeout=10)
+            response.raise_for_status()
+            print(f"✅ Mensaje enviado a {chat_id}")
+
+        return True
+
+    except Exception as e:
+        print(f"❌ Error al enviar a Telegram: {str(e)}")
+        return False
+
+
+def preparar_mensaje_telegram(noticias: list) -> str:
+    """Formatea las noticias para enviar por Telegram"""
+    if not noticias:
+        return "No hay noticias relevantes hoy"
+    
+    mensaje = "<b>📰 Últimas noticias relevantes</b>\n\n"
+    for i, noticia in enumerate(noticias, 1):
+        mensaje += (
+            f"<b>🚨 Noticia {i}:</b> {noticia.get('titulo', 'Sin título')}\n"
+            f"🔗 <a href='{noticia.get('url', '#')}'>Enlace</a>\n"
+            f"📌 <b>Resumen:</b> {noticia.get('resumen_breve', 'Sin resumen')}\n"
+            f"⚠️ <b>Prioridad:</b> {noticia.get('prioridad', 'No especificada').capitalize()}\n"
+            f"⚠️ <b>Impacto:</b> {noticia.get('impacto_emocional', 'No especificado')}\n"
+            f"----------------------------\n\n"
+        )
+    return mensaje
+
+
 
 
 if __name__ == "__main__":
     print("* * * * * Comienzo programa ")
-    json_noticas_final = get_news_ultima_hora("https://www.ultimahora.es/sucesos.html")
-    print(json_noticas_final)
+    noticias = get_news_ultima_hora("https://www.ultimahora.es/sucesos.html")
+
+    if noticias:
+        # Enviar a Telegram
+        mensaje = preparar_mensaje_telegram(noticias)
+        enviar_telegram(mensaje)  # Cambiar a True para pruebas
+        
+        print("\nResumen de noticias enviado")
+    else:
+        print("No se encontraron noticias relevantes")
+
+
+# if __name__ == "__main__":
+#     print("* * * * * Comienzo programa ")
+#     json_noticas_final = get_news_ultima_hora("https://www.ultimahora.es/sucesos.html")
+#     print(json_noticas_final)
 
 
 
