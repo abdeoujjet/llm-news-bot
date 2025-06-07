@@ -240,11 +240,10 @@ def selector_noticias_relevantes(news_list):
 # - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -  
 def enviar_telegram(contenido: str):
     """
-    Envía mensajes a Telegram (tanto a usuario como a canal)
+    Envía mensajes a Telegram (tanto a usuario como a canal), dividiéndolo en partes si supera los 4096 caracteres.
 
     Args:
         contenido (str): Texto a enviar
-        modo_test (bool): Si True, solo simula el envío
     """
     if not TELEGRAM_TOKEN or not TELEGRAM_CHAT_ID or not CHANNEL_ID:
         print("⚠️ Credenciales de Telegram no configuradas")
@@ -254,21 +253,36 @@ def enviar_telegram(contenido: str):
         url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
         chat_ids = [TELEGRAM_CHAT_ID, CHANNEL_ID]
 
+        # Divide el contenido en bloques de hasta 4096 caracteres sin cortar etiquetas HTML
+        max_length = 4096
+        partes = []
+        while len(contenido) > max_length:
+            # Busca el último salto de línea antes del límite
+            corte = contenido.rfind('\n', 0, max_length)
+            if corte == -1:
+                corte = max_length  # Si no hay saltos, corta directamente
+            partes.append(contenido[:corte])
+            contenido = contenido[corte:]
+        partes.append(contenido)  # Agrega la última parte
+
         for chat_id in chat_ids:
-            payload = {
-                "chat_id": chat_id,
-                "text": contenido,
-                "parse_mode": "HTML"
-            }
-            response = requests.post(url, json=payload, timeout=10)
-            response.raise_for_status()
-            print(f"✅ Mensaje enviado a {chat_id}")
+            for i, parte in enumerate(partes):
+                payload = {
+                    "chat_id": chat_id,
+                    "text": parte.strip(),
+                    "parse_mode": "HTML"
+                }
+                response = requests.post(url, json=payload, timeout=10)
+                response.raise_for_status()
+                print(f"✅ Parte {i+1}/{len(partes)} enviada a {chat_id}")
 
         return True
 
     except Exception as e:
         print(f"❌ Error al enviar a Telegram: {str(e)}")
         return False
+
+
 
 
 def preparar_mensaje_telegram(noticias: list) -> str:
@@ -303,12 +317,3 @@ if __name__ == "__main__":
         print("\nResumen de noticias enviado")
     else:
         print("No se encontraron noticias relevantes")
-
-
-# if __name__ == "__main__":
-#     print("* * * * * Comienzo programa ")
-#     json_noticas_final = get_news_ultima_hora("https://www.ultimahora.es/sucesos.html")
-#     print(json_noticas_final)
-
-
-

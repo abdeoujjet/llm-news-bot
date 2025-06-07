@@ -7,4 +7,4 @@ pandas
 concurrent-log-handler
 ipython
 urllib3
-lxml[html_clean]==5.1.0  # Versión específica que incluye el módulo clean
+lxml[html_clean]==5.1.0 
