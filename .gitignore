@@ -1,2 +1,11 @@
+# envs
 env
 .env
+
+# other python tests
+test.ipynb
+main_threads.py
+app\prova.py
+
+# other files
+app\__pycache__
