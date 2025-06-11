@@ -1,25 +1,25 @@
-# 🗞️ Noticias Relevantes con IA
+# 🗞️ Relevant News with AI
 
-Este proyecto realiza un análisis automático de titulares de noticias de **cualquier periódico online** y selecciona los más relevantes usando modelos de lenguaje avanzados de código abierto. 
+This project performs an automatic analysis of news headlines from **any online newspaper** and selects the most relevant ones using advanced open-source language models.  
 
-Las noticias seleccionadas son clasificadas por impacto, gravedad y relevancia, y se resumen de forma muy concisa para captar la atención del lector. El resultado se envia directamente a Telegram.
-
----
-
-## ✨ ¿Qué hace este proyecto?
-
-- Extrae titulares desde un portal de noticias (puedes adaptar la fuente).
-- Filtra las noticias más relevantes mediante un modelo de lenguaje.
-- Clasifica cada noticia por:
-  - Categoría (`asesinato`, `robo`, `corrupción`, etc.)
-  - Impacto emocional
-  - Prioridad (`alta`, `media`, `baja`)
-- Resume cada noticia en ~70 caracteres usando otro LLM.
-- Envía las noticias a un canal o chat de Telegram.
+The selected news stories are classified by impact, severity, and relevance, and are summarized very concisely to capture the reader's attention. The result is sent directly to Telegram.
 
 ---
 
-## 💡 Ejemplo de uso
+## ✨ What does this project do?
+
+- Extracts headlines from a news portal (you can adapt the source).
+- Filters the most relevant news using a language model.
+- Classifies each news story by:
+  - Category (`murder`, `theft`, `corruption`, etc.)
+  - Emotional impact
+  - Priority (`high`, `medium`, `low`)
+- Summarizes each news story in ~70 characters using another LLM.
+- Sends the news to a Telegram channel or chat.
+
+---
+
+## 💡 Example of use
 
 ```python
 from main import get_news_ultima_hora
@@ -30,24 +30,24 @@ noticias_procesadas = get_news_ultima_hora(url)
 
 ---
 
-## 🧠 Modelos de lenguaje usados
+## 🧠 Language models used
 
-El proyecto está pensado para funcionar con modelos open-source ejecutados en local a través de [Ollama](https://ollama.com/), como:
+The project is designed to work with open-source models run locally via [Ollama](https://ollama.com/), as:
 
 - `phi3:3.8b`
 - `gemma3:4b`
 - `wizardlm2:7b`
 - `qwen2.5vl:3b`
 
-Los modelos pueden configurarse fácilmente mediante variables `MODELO_RESUMEN` y `MODELO_FILTRO`.
+The models can be easily configured using the `MODELO_RESUMEN` and `MODELO_FILTRO`.
 
 ---
 
-## 📲 Envío a Telegram
+## 📲 Telegram delivery
 
-El sistema permite el envío automático del resultado a un chat y canal de Telegram, fragmentando los mensajes si superan el límite de 4096 caracteres.
+The system allows automatic delivery of the results to a Telegram chat and channel, splitting messages if they exceed the 4096-character limit.
 
-Solo necesitas configurar:
+You only need to configure:
 
 - `TELEGRAM_BOT_TOKEN`
 - `TELEGRAM_CHAT_ID`
@@ -55,18 +55,13 @@ Solo necesitas configurar:
 
 ---
 
-## 📌 Notas importantes
+## 📌 Important notes
 
-- Este proyecto usa como fuente una web de ejemplo (puede adaptarse a cualquier periódico).
-- El scraping está diseñado con fines **educativos y demostrativos**.
-- No se almacena ni redistribuye contenido original de terceros.
+- This project uses an example website as a source (it can be adapted to any newspaper).
 
 ---
 
-## 👨‍💻 Autor
+## 👨‍💻 Author
 
-Creado por **Abde Oujjet Moumen**  
+Created by **Abde Oujjet Moumen**  
 [LinkedIn](https://www.linkedin.com/in/abde-oujjet-moumen-962402143/)
-
----
-> ⚠️ Este proyecto no representa a ningún medio oficial. Está enfocado en mostrar cómo la inteligencia artificial puede utilizarse para seleccionar y resumir información relevante de forma automática.
