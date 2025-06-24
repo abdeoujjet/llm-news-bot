@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flash Noticias | Últimas actualizaciones</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto+Slab:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #2563eb;
+            --secondary: #1e40af;
+            --accent: #f59e0b;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --border: #e2e8f0;
+            --card-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Poppins', sans-serif;
+            background: #f0f4f8;
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding: 1rem;
+        }
+        
+        .header-content {
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            background: white;
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 1rem;
+        }
+        
+        h1 {
+            font-family: 'Roboto Slab', serif;
+            font-size: 2.2rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .news-container {
+            display: flex;
+            flex-direction: column;
+            gap: 1.8rem;
+        }
+        
+        .news-card {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+        }
+        
+        .news-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }
+        
+        .card-header {
+            padding: 1.2rem 1.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }
+        
+        .card-header h2 {
+            font-size: 1.3rem;
+            margin-bottom: 0.3rem;
+        }
+        
+        .news-card a {
+            color: white;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+        }
+        
+        .news-card a:hover {
+            color: var(--accent);
+        }
+        
+        .card-body {
+            padding: 1.5rem;
+        }
+        
+        .news-content {
+            margin-bottom: 1.2rem;
+            color: #444;
+            line-height: 1.7;
+        }
+        
+        .card-footer {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem 1.5rem;
+            background-color: #f8fafc;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--gray);
+        }
+        
+        .source-badge {
+            background: var(--accent);
+            color: white;
+            font-weight: 500;
+            padding: 0.25rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .date {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+        
+        .icon {
+            font-size: 1.2rem;
+            vertical-align: middle;
+            margin-right: 0.5rem;
+            color: var(--accent);
+        }
+        
+        footer {
+            text-align: center;
+            margin-top: 3.5rem;
+            padding: 1.5rem;
+            color: var(--gray);
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 1.8rem;
+            }
+            
+            .header-content {
+                padding: 0.6rem 1.5rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <i class="fas fa-newspaper fa-2x icon"></i>
+                <h1>Flash Noticias</h1>
+            </div>
+            <p style="margin-top: 0.8rem; color: var(--gray); font-style: italic; font-size: 0.95rem;">
+                Actualizado al minuto con las últimas novedades
+            </p>
+        </header>
+        
+        <div class="news-container">
+            <b>📰 Últimas noticias relevantes</b>
+
+<b>🚨 Noticia 1:</b> Auxilio, mi marido me mata": el grito de socorro de Marisa, la mujer asesinada este martes en Getafe
+🔗 <a href='https://www.diariodemallorca.es/sucesos/2025/06/24/detenido-hombre-matar-punaladas-mujer-getafe-119003390.html'>Enlace</a>
+📌 <b>Resumen:</b> Hombre asesina a su mujer luego del almuerzo según vecinos y detectives en Getafe; violencia machista traslada la víctima al hospital para transfusiones emergentes.
+⚠️ <b>Prioridad:</b> Alta
+⚠️ <b>Impacto:</b> 9
+----------------------------
+
+<b>🚨 Noticia 2:</b> La explosión del bar en la Región de Murcia que dejó una veintena de heridos fue provocada
+🔗 <a href='https://www.diariodemallorca.es/sucesos/2025/06/24/explosion-bar-region-murcia-dejo-119009346.html'>Enlace</a>
+📌 <b>Resumen:</b> Explotación en hostal: Guardia Civil atribuye incendio a manipulación intencional de gas lacrimógeno - Actualidad Regional Murcia/R+D Advertising Público y Profesional   SMS Resumen (67 caracteres)
+⚠️ <b>Prioridad:</b> Alta
+⚠️ <b>Impacto:</b> 7
+----------------------------
+
+
+        </div>
+        
+        <footer>
+            <p>© 2023 Flash Noticias | Fuentes verificadas</p>
+            <p style="margin-top: 0.5rem;">
+                <i class="fab fa-twitter"></i> 
+                <i class="fab fa-facebook"></i> 
+                <i class="fab fa-instagram"></i>
+            </p>
+        </footer>
+    </div>
+</body>
+</html>
