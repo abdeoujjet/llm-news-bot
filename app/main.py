@@ -11,6 +11,7 @@ import pandas as pd
 from readability import Document
 from dotenv import load_dotenv  # para cargar el archivo .env
 from concurrent.futures import ThreadPoolExecutor
+from typing import Optional
 
 
 # Cargar variables del archivo .env
@@ -19,6 +20,8 @@ API_KEY = os.getenv("API_KEY")
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN")
 TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
 CHANNEL_ID = os.getenv("CHANNEL_ID")
+CACHE_FILE = os.getenv("CACHE_FILE")
+PORTALS_FILE = os.getenv("PORTALS_FILE")
 
 MODELO_RESUMEN = "phi3:3.8b"
 # MODELO_RESUMEN = "gemma3:4b"
@@ -29,6 +32,70 @@ MODELO_RESUMEN = "phi3:3.8b"
 MODELO_FILTRO = "gemma3:4b"
 # MODELO_FILTRO = "wizardlm2:7b"
 # MODELO_FILTRO = "qwen2.5vl:3b"
+
+
+
+import feedparser
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin, urlparse
+
+# --- Scraper específico para UltimaHora (HTML) ---
+def scrape_ultimahora(url: str):
+    print(f"🔍 scrape_ultimahora: {url}")
+    headers = {'User-Agent': 'Mozilla/5.0'}
+    r = requests.get(url, headers=headers, timeout=10)
+    r.raise_for_status()
+    soup = BeautifulSoup(r.content, 'html.parser')
+
+    news = []
+    for idx, c in enumerate(soup.select("div.news-item")):
+        h = c.select_one("h2.news-heading, h3.news-heading")
+        a = h and h.select_one("a[href]")
+        if not a:
+            continue
+        news.append({
+            "title": a.get_text(strip=True),
+            "url":   urljoin(url, a["href"]),
+            "id":    idx
+        })
+    print(f"  → {len(news)} noticias crudas de UltimaHora")
+    return news
+
+# --- Scraper genérico para feeds RSS ---
+def scrape_rss(url: str):
+    print(f"🔍 scrape_rss: {url}")
+    feed = feedparser.parse(url)
+    news = []
+    for idx, entry in enumerate(feed.entries):
+        title = entry.get("title", "").strip()
+        link  = entry.get("link", "").strip()
+        if not title or not link:
+            continue
+        news.append({"title": title, "url": link, "id": idx})
+    print(f"  → {len(news)} noticias crudas de RSS")
+    return news
+
+# --- Función unificadora ---
+def get_news_from_portal(url: str):
+    """
+    Elige scraper según tipo de portal:
+      - UltimaHora (HTML)
+      - Cualquier URL que contenga '/rss' → RSS
+    Luego filtra+resume con selector_noticias_relevantes.
+    """
+    domain = urlparse(url).netloc.lower()
+    if "ultimahora.es" in domain and not url.lower().endswith(".rss"):
+        raw = scrape_ultimahora(url)
+    else:
+        # cubre todos los RSS: diariodemallorca, fibwidiario, etc.
+        raw = scrape_rss(url)
+
+    # Aquí llama a tu pipeline de filtrado + resumen
+    return selector_noticias_relevantes(raw)
+
+
+# - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - 
+
 
 def get_news_ultima_hora(url):
     # url de noticias de mallorca
@@ -165,7 +232,7 @@ def selector_noticias_relevantes(news_list):
             "content": """Eres un editor experto en análisis de noticias que escribe estructuras JSON. Tu tarea es:
             
                         1. Analizar esta lista de titulares de noticias
-                        2. Seleccionar los 10 más relevantes según estos criterios:
+                        2. Seleccionar los 3 más relevantes según estos criterios:
                         - Impacto social
                         - Gravedad del suceso
                         - Relevancia pública
@@ -303,17 +370,337 @@ def preparar_mensaje_telegram(noticias: list) -> str:
     return mensaje
 
 
+def guardar_html(contenido: str, filename: str = "noticias.html") -> bool:
+    """
+    Guarda el contenido HTML de las noticias en un archivo local con un estilo básico.
 
+    Args:
+        contenido (str): HTML con las noticias (p. ej. lo que produce preparar_mensaje_telegram).
+        filename (str): Nombre del archivo de salida.
+
+    Returns:
+        bool: True si el archivo se creó correctamente, False en caso contrario.
+    """
+
+    # Plantilla HTML con algo de CSS para que quede "bonito"
+    html_template = f"""<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flash Noticias | Últimas actualizaciones</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Roboto+Slab:wght@300;400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {{
+            --primary: #2563eb;
+            --secondary: #1e40af;
+            --accent: #f59e0b;
+            --light: #f8fafc;
+            --dark: #1e293b;
+            --gray: #64748b;
+            --border: #e2e8f0;
+            --card-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }}
+        
+        * {{
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }}
+        
+        body {{
+            font-family: 'Poppins', sans-serif;
+            background: #f0f4f8;
+            color: var(--dark);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 2rem 1rem;
+        }}
+        
+        .container {{
+            max-width: 800px;
+            margin: 0 auto;
+        }}
+        
+        header {{
+            text-align: center;
+            margin-bottom: 2.5rem;
+            padding: 1rem;
+        }}
+        
+        .header-content {{
+            display: inline-flex;
+            align-items: center;
+            gap: 1rem;
+            background: white;
+            padding: 0.8rem 2rem;
+            border-radius: 50px;
+            box-shadow: var(--card-shadow);
+            margin-bottom: 1rem;
+        }}
+        
+        h1 {{
+            font-family: 'Roboto Slab', serif;
+            font-size: 2.2rem;
+            font-weight: 600;
+            background: linear-gradient(90deg, var(--primary), var(--secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }}
+        
+        .news-container {{
+            display: flex;
+            flex-direction: column;
+            gap: 1.8rem;
+        }}
+        
+        .news-card {{
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: var(--card-shadow);
+            transition: all 0.3s ease;
+        }}
+        
+        .news-card:hover {{
+            transform: translateY(-5px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.12);
+        }}
+        
+        .card-header {{
+            padding: 1.2rem 1.5rem;
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+        }}
+        
+        .card-header h2 {{
+            font-size: 1.3rem;
+            margin-bottom: 0.3rem;
+        }}
+        
+        .news-card a {{
+            color: white;
+            text-decoration: none;
+            transition: all 0.2s;
+            display: block;
+        }}
+        
+        .news-card a:hover {{
+            color: var(--accent);
+        }}
+        
+        .card-body {{
+            padding: 1.5rem;
+        }}
+        
+        .news-content {{
+            margin-bottom: 1.2rem;
+            color: #444;
+            line-height: 1.7;
+        }}
+        
+        .card-footer {{
+            display: flex;
+            justify-content: space-between;
+            padding: 0.8rem 1.5rem;
+            background-color: #f8fafc;
+            border-top: 1px solid var(--border);
+            font-size: 0.85rem;
+            color: var(--gray);
+        }}
+        
+        .source-badge {{
+            background: var(--accent);
+            color: white;
+            font-weight: 500;
+            padding: 0.25rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }}
+        
+        .date {{
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }}
+        
+        .icon {{
+            font-size: 1.2rem;
+            vertical-align: middle;
+            margin-right: 0.5rem;
+            color: var(--accent);
+        }}
+        
+        footer {{
+            text-align: center;
+            margin-top: 3.5rem;
+            padding: 1.5rem;
+            color: var(--gray);
+            font-size: 0.9rem;
+        }}
+        
+        @media (max-width: 768px) {{
+            h1 {{
+                font-size: 1.8rem;
+            }}
+            
+            .header-content {{
+                padding: 0.6rem 1.5rem;
+            }}
+        }}
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <i class="fas fa-newspaper fa-2x icon"></i>
+                <h1>Flash Noticias</h1>
+            </div>
+            <p style="margin-top: 0.8rem; color: var(--gray); font-style: italic; font-size: 0.95rem;">
+                Actualizado al minuto con las últimas novedades
+            </p>
+        </header>
+        
+        <div class="news-container">
+            {contenido}
+        </div>
+        
+        <footer>
+            <p>© 2023 Flash Noticias | Fuentes verificadas</p>
+            <p style="margin-top: 0.5rem;">
+                <i class="fab fa-twitter"></i> 
+                <i class="fab fa-facebook"></i> 
+                <i class="fab fa-instagram"></i>
+            </p>
+        </footer>
+    </div>
+</body>
+</html>"""
+
+
+    try:
+        # Asegurarse de que el directorio existe
+        os.makedirs(os.path.dirname(filename) or ".", exist_ok=True)
+
+        with open(filename, "w", encoding="utf-8") as f:
+            f.write(html_template)
+
+        print(f"✅ Archivo HTML guardado en: {filename}")
+        return True
+
+    except Exception as e:
+        print(f"❌ Error al guardar HTML: {e}")
+        return False
+
+
+
+def load_portals(filename: str = PORTALS_FILE) -> list:
+    """
+    Lee un fichero JSON que contenga directamente una lista de URLs,
+    o un objeto con clave "portales": [...]
+    """
+    if not os.path.exists(filename):
+        raise FileNotFoundError(f"No existe el fichero de portales: {filename}")
+    with open(filename, "r", encoding="utf-8") as f:
+        data = json.load(f)
+    if isinstance(data, dict) and "portales" in data:
+        return data["portales"]
+    if isinstance(data, list):
+        return data
+    raise ValueError(f"Formato no válido en {filename}. Debe ser lista o {{'portales': [...]}}")
+
+def cache_message(mensaje: str, filename: str = CACHE_FILE) -> None:
+    os.makedirs(os.path.dirname(filename) or ".", exist_ok=True)
+    with open(filename, "w", encoding="utf-8") as f:
+        json.dump({"mensaje": mensaje}, f, ensure_ascii=False)
+
+def load_cached_message(filename: str = CACHE_FILE) -> Optional[str]:
+    """
+    Si existe el fichero de caché, devuelve el mensaje guardado. Si no, devuelve None.
+    """
+    if os.path.exists(filename):
+        with open(filename, "r", encoding="utf-8") as f:
+            return json.load(f).get("mensaje")
+    return None
+
+
+# if __name__ == "__main__":
+#     # 1) Intentamos cargar mensaje de caché
+#     mensaje = load_cached_message()
+#     if mensaje is None:
+#         # 2) Si no existe, recorremos todos los portales
+#         portals = load_portals()
+#         todas_noticias = []
+#         for portal in portals:
+#             print(f"▶️ Procesando portal: {portal}")
+#             noticias = get_news_ultima_hora(portal)
+#             if noticias:
+#                 todas_noticias.extend(noticias)
+
+#         # 3) Eliminamos duplicados por URL
+#         seen_urls = set()
+#         unique_noticias = []
+#         for n in todas_noticias:
+#             if n["url"] not in seen_urls:
+#                 unique_noticias.append(n)
+#                 seen_urls.add(n["url"])
+
+#         # 4) Preparamos el mensaje y lo guardamos en caché
+#         mensaje = preparar_mensaje_telegram(unique_noticias)
+#         cache_message(mensaje)
+#         print("✅ Mensaje generado y cacheado")
+#     else:
+#         print("✅ Mensaje cargado desde caché")
+
+#     # 5) Guardamos el HTML final
+#     guardar_html(mensaje, filename="noticias.html")
+#     print("✅ HTML actualizado: noticias.html")
+ 
 
 if __name__ == "__main__":
-    print("* * * * * Comienzo programa ")
-    noticias = get_news_ultima_hora("https://www.ultimahora.es/sucesos.html")
+    MAX_RESUMEN_LEN = 200  # numero de caracteres como máximo
 
-    if noticias:
-        # Enviar a Telegram
-        mensaje = preparar_mensaje_telegram(noticias)
-        enviar_telegram(mensaje)  # Cambiar a True para pruebas
-        
-        print("\nResumen de noticias enviado")
-    else:
-        print("No se encontraron noticias relevantes")
+    with open("news_portals.json", "r", encoding="utf-8") as f:
+        portals = json.load(f)["portales"]
+
+    todas_noticias = []
+    for portal in portals:
+        try:
+            print(f"▶️ Procesando {portal}")
+            noticias = get_news_from_portal(portal)
+            if noticias:
+                todas_noticias.extend(noticias)
+        except Exception as e:
+            print(f"⚠️ Error en {portal}: {e}")
+
+    if not todas_noticias:
+        print("❌ No se encontraron noticias relevantes")
+        exit(1)
+
+    # 3) Eliminar duplicados por URL
+    seen = set(); unique = []
+    for n in todas_noticias:
+        if n["url"] not in seen:
+            seen.add(n["url"])
+            unique.append(n)
+
+    # 4) Filtrar resúmenes vacíos o demasiado largos
+    filtered = []
+    for n in unique:
+        resumen = n.get("resumen_breve", "") or ""
+        if resumen and len(resumen) <= MAX_RESUMEN_LEN:
+            filtered.append(n)
+        else:
+            print(f"❌ Descartada (resumen inválido): {n.get('titulo')}")
+
+    if not filtered:
+        print("❌ No quedan noticias con resúmenes válidos")
+        exit(1)
+
+    # 5) Preparar y guardar
+    mensaje = preparar_mensaje_telegram(filtered)
+    guardar_html(mensaje, filename="noticias.html")
+    # enviar_telegram(mensaje)
+    print("✅ HTML actualizado: noticias.html")
